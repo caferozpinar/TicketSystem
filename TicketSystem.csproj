@@ -8,19 +8,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.*" />
-    <!-- Design ve Tools sadece local 'dotnet ef' komutları için gerekli -->
-    <!-- ExcludeAssets="all" → production build'e dahil edilmez, hata önlenir -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.*">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-      <ExcludeAssets Condition="'$(Configuration)'=='Release'">all</ExcludeAssets>
-    </PackageReference>
+    <!-- Design ve Tools kaldirildi: sadece local dotnet-ef icin gereklidir, runtime'da gerekmez -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.*" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.*">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-      <ExcludeAssets Condition="'$(Configuration)'=='Release'">all</ExcludeAssets>
-    </PackageReference>
   </ItemGroup>
 
 </Project>

@@ -42,19 +42,7 @@
               "target": "Package",
               "version": "[8.0.*, )"
             },
-            "Microsoft.EntityFrameworkCore.Design": {
-              "include": "None",
-              "suppressParent": "All",
-              "target": "Package",
-              "version": "[8.0.*, )"
-            },
             "Microsoft.EntityFrameworkCore.Sqlite": {
-              "target": "Package",
-              "version": "[8.0.*, )"
-            },
-            "Microsoft.EntityFrameworkCore.Tools": {
-              "include": "None",
-              "suppressParent": "All",
               "target": "Package",
               "version": "[8.0.*, )"
             }
