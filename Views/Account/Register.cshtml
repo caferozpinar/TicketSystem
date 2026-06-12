@@ -1,0 +1,74 @@
+@model TicketSystem.ViewModels.RegisterViewModel
+@{
+    ViewData["Title"] = "Kayıt Ol";
+}
+
+<div class="row justify-content-center mt-4">
+    <div class="col-md-5">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-success text-white text-center py-3">
+                <h4 class="mb-0"><i class="bi bi-person-plus"></i> Kayıt Ol</h4>
+            </div>
+            <div class="card-body p-4">
+                <form asp-action="Register" asp-controller="Account" method="post">
+                    @Html.AntiForgeryToken()
+
+                    <!-- Identity hataları buraya yazılır (örn: e-posta zaten kayıtlı) -->
+                    @if (ViewData.ModelState.ErrorCount > 0)
+                    {
+                        <div class="alert alert-danger">
+                            <div asp-validation-summary="ModelOnly"></div>
+                        </div>
+                    }
+
+                    <!-- Ad Soyad -->
+                    <div class="mb-3">
+                        <label asp-for="FullName" class="form-label fw-semibold"></label>
+                        <input asp-for="FullName" class="form-control" placeholder="Ad Soyad" />
+                        <span asp-validation-for="FullName" class="text-danger small"></span>
+                    </div>
+
+                    <!-- E-posta -->
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label fw-semibold"></label>
+                        <input asp-for="Email" class="form-control" placeholder="ornek@mail.com" />
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Şifre -->
+                    <div class="mb-3">
+                        <label asp-for="Password" class="form-label fw-semibold"></label>
+                        <input asp-for="Password" class="form-control" placeholder="En az 6 karakter" />
+                        <span asp-validation-for="Password" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Şifre Tekrar — Compare annotation ile eşleşme kontrol edilir -->
+                    <div class="mb-3">
+                        <label asp-for="ConfirmPassword" class="form-label fw-semibold"></label>
+                        <input asp-for="ConfirmPassword" class="form-control" placeholder="Şifrenizi tekrar girin" />
+                        <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                    </div>
+
+                    <small class="text-muted d-block mb-3">
+                        <i class="bi bi-info-circle"></i> Kayıt sonrası otomatik olarak "Müşteri" rolü atanır.
+                    </small>
+
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-person-check"></i> Kayıt Ol
+                    </button>
+                </form>
+
+                <hr />
+                <div class="text-center">
+                    <small>Zaten hesabınız var mı?
+                        <a asp-controller="Account" asp-action="Login">Giriş Yap</a>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

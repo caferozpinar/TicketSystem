@@ -1,0 +1,96 @@
+@{
+    ViewData["Title"] = "Hoş Geldiniz";
+    Layout = "_Layout";
+}
+
+<!-- Giriş yapmamış kullanıcılara gösterilen karşılama sayfası -->
+<div class="py-5 text-center">
+    <i class="bi bi-headset display-1 text-primary"></i>
+    <h1 class="mt-3 fw-bold">TicketSystem</h1>
+    <p class="lead text-muted">Teknik destek taleplerini kolayca yönetin</p>
+    <hr class="my-4 w-50 mx-auto" />
+
+    <div class="row justify-content-center g-4 mb-5">
+        <!-- Özellik kartları -->
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100 text-center p-3">
+                <i class="bi bi-plus-circle text-primary fs-1 mb-2"></i>
+                <h5>Talep Oluştur</h5>
+                <p class="text-muted small">Teknik sorunlarınızı detaylı biçimde açıklayın</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100 text-center p-3">
+                <i class="bi bi-eye text-success fs-1 mb-2"></i>
+                <h5>Durumu Takip Et</h5>
+                <p class="text-muted small">Talebinizin anlık durumunu her zaman görün</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100 text-center p-3">
+                <i class="bi bi-chat-dots text-warning fs-1 mb-2"></i>
+                <h5>Yanıt Al</h5>
+                <p class="text-muted small">Destek ekibimizle gerçek zamanlı iletişim</p>
+            </div>
+        </div>
+    </div>
+
+    <a asp-controller="Account" asp-action="Login" class="btn btn-primary btn-lg me-2">
+        <i class="bi bi-box-arrow-in-right"></i> Giriş Yap
+    </a>
+    <a asp-controller="Account" asp-action="Register" class="btn btn-outline-primary btn-lg">
+        <i class="bi bi-person-plus"></i> Kayıt Ol
+    </a>
+
+    <!-- Test giriş bilgileri -->
+    <div class="mt-5 p-4 bg-light rounded border">
+        <h6 class="text-muted mb-3"><i class="bi bi-info-circle"></i> Test Hesapları — Giriş yapıktan sonra /Account/Login'e tekrar giderek hesap değiştirebilirsiniz</h6>
+        <div class="row justify-content-center g-3">
+            <div class="col-md-2">
+                <div class="card border-danger h-100">
+                    <div class="card-body py-2 text-center">
+                        <span class="badge bg-danger">Admin</span><br/>
+                        <small>admin@@ticketsystem.com</small><br/>
+                        <small class="text-muted">Admin@123</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card border-warning h-100">
+                    <div class="card-body py-2 text-center">
+                        <span class="badge bg-warning text-dark">Destek 1</span><br/>
+                        <small>destek@@ticketsystem.com</small><br/>
+                        <small class="text-muted">Support@123</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card border-warning h-100">
+                    <div class="card-body py-2 text-center">
+                        <span class="badge bg-warning text-dark">Destek 2</span><br/>
+                        <small>destek2@@ticketsystem.com</small><br/>
+                        <small class="text-muted">Support@123</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card border-success h-100">
+                    <div class="card-body py-2 text-center">
+                        <span class="badge bg-success">Müşteri 1</span><br/>
+                        <small>musteri1@@test.com</small><br/>
+                        <small class="text-muted">Customer@123</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card border-success h-100">
+                    <div class="card-body py-2 text-center">
+                        <span class="badge bg-success">Müşteri 2</span><br/>
+                        <small>musteri2@@test.com</small><br/>
+                        <small class="text-muted">Customer@123</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

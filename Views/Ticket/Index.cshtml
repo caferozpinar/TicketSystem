@@ -1,0 +1,233 @@
+@*
+    ============================================================
+    TICKET/INDEX.CSHTML — Talep Listesi
+    ============================================================
+    PROJE GEREKSİNİMİ KARŞILANAN NOKTALAR:
+    ✔ "ViewModel kullanımı"     → @model TicketListViewModel
+    ✔ "LINQ ile filtreleme"     → Durum ve sahiplenme filtreleri controller'da
+    ✔ "Role-based UI"           → isStaff: destek sekmesi + öncelik sütunu görünür
+
+    SAHİPLENME FİLTRE MANTIĞI (controller'da uygulanır):
+      • "Tüm Talepler" sekmesi → WHERE AssignedToId IS NULL
+        Üstlenilmiş talepler bu listeden gizlenir, karışıklık önlenir.
+      • "Benim Taleplerim" sekmesi → WHERE AssignedToId = {benim ID'm}
+        Sadece benim üstlendiğim talepler.
+
+    ÖNCELİK SÜTUNU:
+      Müşteri önceliği göremez — @if (isStaff) bloğuyla hem <th> hem <td>
+      koşullu render edilir.
+    ============================================================
+*@
+@model TicketSystem.ViewModels.TicketListViewModel
+@{
+    ViewData["Title"] = "Talepler";
+    bool isStaff = User.IsInRole("Support") || User.IsInRole("Admin");
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-ticket-detailed"></i> @(Model.MyTicketsFilter ? "Benim Taleplerim" : isStaff ? "Tüm Talepler" : "Taleplerim")</h2>
+    @if (!isStaff)
+    {
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Yeni Talep
+        </a>
+    }
+</div>
+
+@*
+    ============================================================
+    BENİM TALEPLERİM SEKMESİ — Sadece Destek Ekibine Gösterilir
+    ============================================================
+    Claim ettiği talepleri hızlıca bulmak için filtre sekmesi.
+    Model.MyTicketsFilter aktifse sekme seçili görünür.
+    Model.MyAssignedCount → rozetteki sayı, controller'da LINQ ile hesaplandı:
+      await _context.Tickets.CountAsync(t => t.AssignedToId == userId)
+    ============================================================
+*@
+@if (isStaff)
+{
+    <div class="mb-4">
+        <ul class="nav nav-tabs">
+            <li class="nav-item">
+                <a class="nav-link @(!Model.MyTicketsFilter ? "active" : "")"
+                   asp-action="Index">
+                    <i class="bi bi-list-ul"></i> Tüm Talepler
+                </a>
+            </li>
+            <li class="nav-item">
+                <!-- myTickets=true → controller'da AssignedToId == userId filtresi devreye girer -->
+                <a class="nav-link @(Model.MyTicketsFilter ? "active" : "")"
+                   asp-action="Index" asp-route-myTickets="true">
+                    <i class="bi bi-person-check"></i> Benim Taleplerim
+                    @if (Model.MyAssignedCount > 0)
+                    {
+                        <span class="badge bg-warning text-dark ms-1">@Model.MyAssignedCount</span>
+                    }
+                </a>
+            </li>
+        </ul>
+    </div>
+}
+
+<!-- İstatistik özet kartları — ViewModel'den gelen veriler -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <!-- Filtre linki: tıklanınca sadece o durumdaki talepler listelenir -->
+        <a asp-action="Index" class="text-decoration-none">
+            <div class="card border-0 shadow-sm text-center p-2 @(Model.StatusFilter == null ? "border-primary border-2" : "")">
+                <div class="fw-bold fs-4">@Model.TotalCount</div>
+                <small class="text-muted">Tümü</small>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a asp-action="Index" asp-route-statusFilter="0" class="text-decoration-none">
+            <div class="card border-0 shadow-sm text-center p-2 @(Model.StatusFilter == TicketSystem.Models.TicketStatus.Acik ? "border-primary border-2" : "")">
+                <div class="fw-bold fs-4 text-primary">@Model.OpenCount</div>
+                <small class="text-muted">Açık</small>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a asp-action="Index" asp-route-statusFilter="1" class="text-decoration-none">
+            <div class="card border-0 shadow-sm text-center p-2 @(Model.StatusFilter == TicketSystem.Models.TicketStatus.Incelemede ? "border-warning border-2" : "")">
+                <div class="fw-bold fs-4 text-warning">@Model.InProgressCount</div>
+                <small class="text-muted">İncelemede</small>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a asp-action="Index" asp-route-statusFilter="2" class="text-decoration-none">
+            <div class="card border-0 shadow-sm text-center p-2 @(Model.StatusFilter == TicketSystem.Models.TicketStatus.Cozuldu ? "border-success border-2" : "")">
+                <div class="fw-bold fs-4 text-success">@Model.ResolvedCount</div>
+                <small class="text-muted">Çözüldü</small>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- Talep listesi tablosu -->
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        @if (!Model.Tickets.Any())
+        {
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-inbox fs-1"></i>
+                <p class="mt-2">Gösterilecek talep bulunamadı.</p>
+                @if (!isStaff)
+                {
+                    <a asp-action="Create" class="btn btn-primary">İlk Talebini Oluştur</a>
+                }
+            </div>
+        }
+        else
+        {
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Başlık</th>
+                        @if (isStaff)
+                        {
+                            <th>Müşteri</th>
+                        }
+                        <th>Kategori</th>
+                        @if (isStaff) { <th>Öncelik</th> }
+                        <th>Durum</th>
+                        <th>Atanan</th>
+                        <th>Tarih</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var ticket in Model.Tickets)
+                    {
+                        <tr>
+                            <td class="text-muted small">#@ticket.Id</td>
+                            <td>
+                                <a asp-action="Detail" asp-route-id="@ticket.Id"
+                                   class="text-decoration-none fw-semibold">
+                                    @ticket.Title
+                                </a>
+                            </td>
+                            @if (isStaff)
+                            {
+                                <td class="small">@ticket.Customer?.FullName</td>
+                            }
+                            <td class="small text-muted">
+                                @{
+                                    var catLabel = ticket.Category.ToString() switch {
+                                        "GenelSoru" => "Genel Soru",
+                                        "TeknikSorun" => "Teknik Sorun",
+                                        "HesapSorunu" => "Hesap Sorunu",
+                                        "FaturaOdeme" => "Fatura/Ödeme",
+                                        _ => "Diğer"
+                                    };
+                                }
+                                @catLabel
+                            </td>
+                            @if (isStaff)
+                            {
+                                <td>
+                                    @{
+                                        var priClass = ticket.Priority.ToString() switch {
+                                            "Kritik" => "danger",
+                                            "Yuksek" => "warning text-dark",
+                                            "Orta" => "info text-dark",
+                                            _ => "secondary"
+                                        };
+                                        var priLabel = ticket.Priority.ToString() switch {
+                                            "Yuksek" => "Yüksek",
+                                            "Dusuk" => "Düşük",
+                                            _ => ticket.Priority.ToString()
+                                        };
+                                    }
+                                    <span class="badge bg-@priClass">@priLabel</span>
+                                </td>
+                            }
+                            <td>
+                                @{
+                                    var statusClass = ticket.Status.ToString() switch {
+                                        "Acik" => "primary",
+                                        "Incelemede" => "warning text-dark",
+                                        "Cozuldu" => "success",
+                                        _ => "secondary"
+                                    };
+                                    var statusLabel = ticket.Status.ToString() switch {
+                                        "Acik" => "Açık",
+                                        "Incelemede" => "İncelemede",
+                                        "Cozuldu" => "Çözüldü",
+                                        _ => "Kapandı"
+                                    };
+                                }
+                                <span class="badge bg-@statusClass">@statusLabel</span>
+                            </td>
+                            <td class="small text-muted">
+                                @(ticket.AssignedTo?.FullName ?? "-")
+                            </td>
+                            <td class="small text-muted">@ticket.CreatedAt.ToString("dd.MM.yyyy")</td>
+                            <td>
+                                <a asp-action="Detail" asp-route-id="@ticket.Id"
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                @if (User.IsInRole("Admin"))
+                                {
+                                    <!-- Admin: talep silme butonu -->
+                                    <form asp-action="Delete" asp-route-id="@ticket.Id"
+                                          method="post" class="d-inline"
+                                          onsubmit="return confirm('Bu talebi silmek istediğinize emin misiniz?')">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

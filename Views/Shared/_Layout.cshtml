@@ -1,0 +1,183 @@
+@*
+    ============================================================
+    _LAYOUT.CSHTML — Tüm Sayfalar İçin Ortak Şablon
+    ============================================================
+    PROJE GEREKSİNİMİ KARŞILANAN NOKTA:
+    ✔ "_Layout.cshtml kullanarak ortak Header/Footer yapısı"
+
+    Bu dosya tüm view'ların iskeletidir. Her view @RenderBody() ile
+    buradaki <main> etiketine yerleşir — header, footer, CSS/JS
+    tekrar yazmak gerekmez.
+
+    ROLE-BASED NAVİGASYON:
+    Navbar'daki menü öğeleri kullanıcının rolüne göre değişir.
+    User.IsInRole() → Identity'nin cookie'den okuduğu rol bilgisini sorgular.
+      • Customer   → "Yeni Talep" butonu görünür
+      • Support    → Sarı "Destek" rozeti
+      • Admin      → Kırmızı "Admin" rozeti
+    Bu sadece görsel bir düzenleme — gerçek yetki kontrolü
+    controller'lardaki [Authorize] attribute'larında yapılır.
+    ============================================================
+*@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - TicketSystem</title>
+    <!-- Bootstrap 5 CSS -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <!-- Bootstrap Icons (rozet, ikon için) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <style>
+        /* Genel sayfa düzeni */
+        body { background-color: #f8f9fa; }
+        .navbar-brand { font-weight: bold; font-size: 1.4rem; }
+        /* Durum badge'leri için renk tanımları */
+        .badge-acik { background-color: #0d6efd; }
+        .badge-incelemede { background-color: #ffc107; color: #000; }
+        .badge-cozuldu { background-color: #198754; }
+        .badge-kapandi { background-color: #6c757d; }
+        /* Yanıt kutuları */
+        .staff-reply { border-left: 4px solid #0d6efd; background: #f0f4ff; }
+        .customer-reply { border-left: 4px solid #198754; background: #f0fff4; }
+    </style>
+</head>
+<body>
+    <!-- ===== HEADER / NAV BAR ===== -->
+    <!-- _Layout.cshtml → tüm sayfalar bu ortak header'ı kullanır -->
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-dark bg-primary shadow-sm mb-4">
+            <div class="container">
+                <!-- Marka adı -->
+                <a class="navbar-brand" asp-controller="Home" asp-action="Index">
+                    <i class="bi bi-headset"></i> TicketSystem
+                </a>
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#navbarContent">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="navbarContent">
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Home" asp-action="Index">
+                                <i class="bi bi-house"></i> Ana Sayfa
+                            </a>
+                        </li>
+                        <!-- Giriş yapılmışsa talep menüsünü göster -->
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Ticket" asp-action="Index">
+                                    <i class="bi bi-ticket"></i> Talepler
+                                </a>
+                            </li>
+                            <!-- Müşteri rolündeyse yeni talep oluştur linki -->
+                            @if (User.IsInRole("Customer"))
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Ticket" asp-action="Create">
+                                        <i class="bi bi-plus-circle"></i> Yeni Talep
+                                    </a>
+                                </li>
+                            }
+                        }
+                    </ul>
+
+                    <!-- Sağ taraf: kullanıcı bilgisi veya giriş/kayıt linkleri -->
+                    <ul class="navbar-nav">
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <!-- Aktif kullanıcının adını ve rolünü göster -->
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                                    <i class="bi bi-person-circle"></i>
+                                    @User.Identity.Name
+                                    @if (User.IsInRole("Admin"))
+                                    {
+                                        <span class="badge bg-danger ms-1">Admin</span>
+                                    }
+                                    else if (User.IsInRole("Support"))
+                                    {
+                                        <span class="badge bg-warning text-dark ms-1">Destek</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-light text-dark ms-1">Müşteri</span>
+                                    }
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <!-- Çıkış işlemi POST ile yapılır (CSRF koruması için) -->
+                                        <form asp-controller="Account" asp-action="Logout" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="dropdown-item text-danger">
+                                                <i class="bi bi-box-arrow-right"></i> Çıkış Yap
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Account" asp-action="Login">
+                                    <i class="bi bi-box-arrow-in-right"></i> Giriş
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Account" asp-action="Register">
+                                    <i class="bi bi-person-plus"></i> Kayıt Ol
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- ===== ANA İÇERİK ===== -->
+    <div class="container pb-4">
+        <!-- Başarı/Hata mesajları (TempData ile gönderilir) -->
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="bi bi-check-circle"></i> @TempData["Success"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-circle"></i> @TempData["Error"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        <main role="main">
+            @RenderBody()
+        </main>
+    </div>
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="bg-dark text-white py-3 mt-4">
+        <div class="container text-center">
+            <small>
+                <i class="bi bi-headset"></i>
+                &copy; 2026 TicketSystem — Teknik Destek Yönetim Sistemi
+            </small>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,66 @@
+@model TicketSystem.ViewModels.TicketCreateViewModel
+@{
+    ViewData["Title"] = "Yeni Talep";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-7">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-primary text-white py-3">
+                <h4 class="mb-0"><i class="bi bi-plus-circle"></i> Yeni Destek Talebi</h4>
+            </div>
+            <div class="card-body p-4">
+
+                <!-- Yeni talep formu — POST /Ticket/Create -->
+                <form asp-action="Create" method="post">
+                    @Html.AntiForgeryToken()
+
+                    <!-- Başlık alanı -->
+                    <div class="mb-3">
+                        <label asp-for="Title" class="form-label fw-semibold"></label>
+                        <input asp-for="Title" class="form-control"
+                               placeholder="Sorununuzu kısaca özetleyin (5-100 karakter)" />
+                        <!-- Data Annotation hatası burada gösterilir -->
+                        <span asp-validation-for="Title" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Kategori dropdown'ı — enum değerleri otomatik listelenir -->
+                    <!-- Öncelik, seçilen kategoriye ve metin içeriğine göre otomatik atanır -->
+                    <div class="mb-3">
+                        <label asp-for="Category" class="form-label fw-semibold"></label>
+                        <select asp-for="Category" class="form-select"
+                                asp-items="Html.GetEnumSelectList<TicketSystem.Models.TicketCategory>()">
+                        </select>
+                        <div class="form-text">
+                            <i class="bi bi-magic"></i>
+                            Öncelik kategori ve içeriğe göre otomatik belirlenir.
+                        </div>
+                    </div>
+
+                    <!-- Açıklama alanı -->
+                    <div class="mb-3">
+                        <label asp-for="Description" class="form-label fw-semibold"></label>
+                        <textarea asp-for="Description" class="form-control" rows="6"
+                                  placeholder="Sorununuzu ayrıntılı açıklayın. Ne zaman başladı? Hata mesajı var mı?"></textarea>
+                        <span asp-validation-for="Description" class="text-danger small"></span>
+                        <div class="form-text">En az 10, en fazla 2000 karakter.</div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-send"></i> Talebi Gönder
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> İptal
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <!-- Client-side validation — server'a gitmeden formda hata gösterir -->
+    <partial name="_ValidationScriptsPartial" />
+}

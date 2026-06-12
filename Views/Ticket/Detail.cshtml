@@ -1,0 +1,347 @@
+@*
+    ============================================================
+    TICKET/DETAIL.CSHTML — Talep Detay Sayfası
+    ============================================================
+    PROJE GEREKSİNİMİ KARŞILANAN NOKTALAR:
+    ✔ "ViewModel kullanımı" → @model TicketDetailViewModel ile Ticket + form tek pakette
+    ✔ Role-based UI         → Model.IsStaff ile destek paneli koşullu gösterilir
+    ✔ Enum görüntüleme      → Status/Priority değerleri switch ile Türkçeye çevrilir
+
+    MÜŞTERI YANIT KISITI — 2 KATMANLI GÜVENLİK:
+    Katman 1 (Bu view): staffReplied değişkeni kontrol edilir.
+      • Destek yanıtı yoksa → disabled textarea + uyarı mesajı (pasif form)
+      • Destek yanıtı varsa → aktif form, müşteri yazabilir
+    Katman 2 (TicketController.AddResponse): View bypass edilse bile
+      sunucu tarafında aynı kontrol tekrar yapılır. Postman ile doğrudan
+      POST gönderilse de engellenir.
+
+    DESTEK PANELİ:
+    Model.IsStaff == true ise sağ sütunda durum güncelleme formu görünür.
+    Bu form sadece Support ve Admin rolündeki kullanıcılara gösterilir.
+    Controller'daki [Authorize(Roles = "Support,Admin")] bunu sunucu tarafında
+    da garantiler.
+    ============================================================
+*@
+@model TicketSystem.ViewModels.TicketDetailViewModel
+@{
+    ViewData["Title"] = $"Talep #{Model.Ticket.Id}";
+    var ticket = Model.Ticket;
+    var statusLabel = ticket.Status.ToString() switch {
+        "Acik" => "Açık",
+        "Incelemede" => "İncelemede",
+        "Cozuldu" => "Çözüldü",
+        _ => "Kapandı"
+    };
+    var statusClass = ticket.Status.ToString() switch {
+        "Acik" => "primary",
+        "Incelemede" => "warning",
+        "Cozuldu" => "success",
+        _ => "secondary"
+    };
+    // Sayfa genelinde kullanılır: yanıt formu + durum formu + sahiplenme kartı
+    var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    bool isAssignedToMe = ticket.AssignedToId == currentUserId;
+    bool isAssignedToOther = ticket.AssignedToId != null && !isAssignedToMe;
+}
+
+<!-- Üst bilgi satırı -->
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+        <h3>
+            <span class="text-muted">#@ticket.Id</span> @ticket.Title
+        </h3>
+        <span class="badge bg-@statusClass fs-6">@statusLabel</span>
+        <span class="badge bg-secondary ms-1">@ticket.Category</span>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Listeye Dön
+    </a>
+</div>
+
+<div class="row g-4">
+    <!-- Sol sütun: talep detayı + yanıtlar -->
+    <div class="col-md-8">
+
+        <!-- Talep açıklaması kartı -->
+        <div class="card shadow-sm border-0 mb-3">
+            <div class="card-header bg-white d-flex align-items-center gap-2">
+                <i class="bi bi-person-circle text-primary fs-5"></i>
+                <strong>@ticket.Customer?.FullName</strong>
+                <small class="text-muted ms-auto">
+                    @ticket.CreatedAt.ToString("dd.MM.yyyy HH:mm")
+                </small>
+            </div>
+            <div class="card-body">
+                <!-- nl2br: satır sonlarını <br> olarak göster -->
+                @Html.Raw(System.Net.WebUtility.HtmlEncode(ticket.Description).Replace("\n", "<br/>"))
+            </div>
+        </div>
+
+        <!-- ===== YANIT AKIŞI ===== -->
+        @if (ticket.Responses.Any())
+        {
+            <h6 class="text-muted mb-3">
+                <i class="bi bi-chat-dots"></i> @ticket.Responses.Count Yanıt
+            </h6>
+            @foreach (var response in ticket.Responses.OrderBy(r => r.CreatedAt))
+            {
+                <!-- Destek yanıtı vs müşteri yanıtı için farklı stil -->
+                <div class="card border-0 mb-3 @(response.IsStaffReply ? "staff-reply" : "customer-reply")">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-2">
+                            <div>
+                                <strong>@response.User?.FullName</strong>
+                                @if (response.IsStaffReply)
+                                {
+                                    <!-- Destek ekibi yanıtını işaretle -->
+                                    <span class="badge bg-primary ms-1 small">Destek Ekibi</span>
+                                }
+                            </div>
+                            <small class="text-muted">
+                                @response.CreatedAt.ToString("dd.MM.yyyy HH:mm")
+                            </small>
+                        </div>
+                        @Html.Raw(System.Net.WebUtility.HtmlEncode(response.Message).Replace("\n", "<br/>"))
+                    </div>
+                </div>
+            }
+        }
+
+        @*
+            ============================================================
+            YANIT YAZMA FORMU — Çift Kural Uygulanır
+            ============================================================
+            canReply boolean'ı iki farklı kuralı birleştirir:
+
+            Destek ekibi için:
+              isAssignedToMe == true  → form aktif, yazabilir
+              isAssignedToMe == false → form disabled, "önce üstlenin" mesajı
+              (Sunucu tarafı: AddResponse action'da AssignedToId != userId kontrolü)
+
+            Müşteri için:
+              staffReplied == true  → form aktif, yazabilir
+              staffReplied == false → form disabled, "destek bekleniyor" mesajı
+              (Sunucu tarafı: AddResponse action'da Responses.Any(IsStaffReply) kontrolü)
+
+            Her iki kural da view + controller katmanında ayrı ayrı uygulanır.
+            ============================================================
+        *@
+        <!-- ===== YANIT YAZMA FORMU ===== -->
+        @if (ticket.Status != TicketSystem.Models.TicketStatus.Kapandi)
+        {
+            bool staffReplied = ticket.Responses.Any(r => r.IsStaffReply);
+            bool canReply = (Model.IsStaff && isAssignedToMe) || (!Model.IsStaff && staffReplied);
+
+            <div class="card shadow-sm border-0 mt-3">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="bi bi-reply"></i> Yanıt Yaz</h6>
+                </div>
+                <div class="card-body">
+                    @if (canReply)
+                    {
+                        <form asp-action="AddResponse" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="ticketId" value="@ticket.Id" />
+                            <div class="mb-3">
+                                <textarea name="message" class="form-control" rows="4"
+                                          placeholder="Yanıtınızı buraya yazın..." required minlength="2"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-send"></i> Gönder
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <div class="text-center py-3 text-muted">
+                            <i class="bi bi-lock fs-3 d-block mb-2"></i>
+                            @if (Model.IsStaff)
+                            {
+                                <span>Bu talebi yanıtlamak için önce <strong>üstlenmelisiniz</strong>.</span>
+                            }
+                            else
+                            {
+                                <span>Destek ekibinin yanıtı bekleniyor. Yanıt geldikten sonra siz de yazabilirsiniz.</span>
+                            }
+                        </div>
+                        <textarea class="form-control" rows="4" disabled
+                                  placeholder="Bu alan pasiftir..."></textarea>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Sağ sütun: talep bilgileri + destek işlemleri -->
+    <div class="col-md-4">
+
+        <!-- Talep bilgileri kartı -->
+        <div class="card shadow-sm border-0 mb-3">
+            <div class="card-header bg-white"><h6 class="mb-0">Talep Bilgileri</h6></div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-5 text-muted">Durum</dt>
+                    <dd class="col-7"><span class="badge bg-@statusClass">@statusLabel</span></dd>
+
+                    @if (Model.IsStaff)
+                    {
+                        <dt class="col-5 text-muted">Öncelik</dt>
+                        <dd class="col-7">
+                            @{
+                                var priLabel = ticket.Priority.ToString() switch {
+                                    "Yuksek" => "Yüksek",
+                                    "Dusuk" => "Düşük",
+                                    _ => ticket.Priority.ToString()
+                                };
+                            }
+                            @priLabel
+                        </dd>
+                    }
+
+                    <dt class="col-5 text-muted">Kategori</dt>
+                    <dd class="col-7 small">
+                        @{
+                            var catLabel = ticket.Category.ToString() switch {
+                                "GenelSoru" => "Genel Soru",
+                                "TeknikSorun" => "Teknik Sorun",
+                                "HesapSorunu" => "Hesap Sorunu",
+                                "FaturaOdeme" => "Fatura/Ödeme",
+                                _ => "Diğer"
+                            };
+                        }
+                        @catLabel
+                    </dd>
+
+                    <dt class="col-5 text-muted">Açıldı</dt>
+                    <dd class="col-7 small">@ticket.CreatedAt.ToString("dd.MM.yyyy HH:mm")</dd>
+
+                    @if (ticket.UpdatedAt.HasValue)
+                    {
+                        <dt class="col-5 text-muted">Güncellendi</dt>
+                        <dd class="col-7 small">@ticket.UpdatedAt.Value.ToString("dd.MM.yyyy HH:mm")</dd>
+                    }
+
+                    <dt class="col-5 text-muted">Atanan</dt>
+                    <dd class="col-7 small">@(ticket.AssignedTo?.FullName ?? "Atanmadı")</dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Destek ekibi / Admin işlemleri (sadece yetkililer görebilir) -->
+        @if (Model.IsStaff)
+        {
+            @*
+                ============================================================
+                TALEBİ SAHİPLENME — Destek Ekibine Özel, Müşteri Göremez
+                ============================================================
+                Model.IsStaff == false ise bu blok hiç render edilmez.
+                Ama gerçek güvenlik controller'dadır:
+                  • Claim action: [Authorize(Roles = "Support,Admin")]
+                  • Release action: [Authorize(Roles = "Support,Admin")]
+                Müşteri bu form'ları direkt URL ile POST etse de 403 alır.
+
+                İş mantığı:
+                  • Kimseye atanmamış → "Üstlen" butonu aktif
+                  • Bana atanmış → "Bırak" butonu gösterilir
+                  • Başkasına atanmış → kim üstlenmiş bilgisi gösterilir
+                ============================================================
+            *@
+            <!-- Talep Sahiplenme Kartı -->
+            <div class="card shadow-sm border-0 border-start border-4 border-warning mb-3">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="bi bi-person-check"></i> Talep Sahiplenme</h6>
+                </div>
+                <div class="card-body">
+                    @if (isAssignedToMe)
+                    {
+                        <!-- Bu talep bende — bırak butonu göster -->
+                        <div class="alert alert-success py-2 mb-2">
+                            <i class="bi bi-check-circle-fill"></i>
+                            <strong>Bu talep üzerinizdedir.</strong>
+                        </div>
+                        <form asp-action="Release" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="ticketId" value="@ticket.Id" />
+                            <button type="submit" class="btn btn-outline-warning btn-sm w-100">
+                                <i class="bi bi-person-dash"></i> Talebi Bırak
+                            </button>
+                        </form>
+                    }
+                    else if (isAssignedToOther)
+                    {
+                        <!-- Başkası üstlenmiş — bilgi göster, işlem yok -->
+                        <div class="alert alert-secondary py-2 mb-0">
+                            <i class="bi bi-person-fill"></i>
+                            <strong>@ticket.AssignedTo?.FullName</strong> bu talebi üstlenmiş.
+                        </div>
+                    }
+                    else
+                    {
+                        <!-- Kimse üstlenmemiş — üstlen butonu göster -->
+                        <p class="text-muted small mb-2">Bu talep henüz kimseye atanmamış.</p>
+                        <form asp-action="Claim" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="ticketId" value="@ticket.Id" />
+                            <button type="submit" class="btn btn-warning btn-sm w-100">
+                                <i class="bi bi-person-plus"></i> Talebi Üstlen
+                            </button>
+                        </form>
+                    }
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0 border-start border-4 border-primary">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="bi bi-gear"></i> Destek İşlemleri</h6>
+                </div>
+                <div class="card-body">
+                    @if (isAssignedToMe)
+                    {
+                        <!-- Talebi üstlenen kişi: durum değiştirme formu aktif -->
+                        <form asp-action="UpdateStatus" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="ticketId" value="@ticket.Id" />
+                            <label class="form-label fw-semibold small">Durumu Güncelle</label>
+                            <select name="newStatus" class="form-select form-select-sm mb-2">
+                                @foreach (TicketSystem.Models.TicketStatus status in Enum.GetValues(typeof(TicketSystem.Models.TicketStatus)))
+                                {
+                                    var label = status.ToString() switch {
+                                        "Acik" => "Açık",
+                                        "Incelemede" => "İncelemede",
+                                        "Cozuldu" => "Çözüldü",
+                                        _ => "Kapandı"
+                                    };
+                                    if (status == ticket.Status)
+                                    {
+                                        <option value="@((int)status)" selected>@label (Mevcut)</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@((int)status)">@label</option>
+                                    }
+                                }
+                            </select>
+                            <button type="submit" class="btn btn-primary btn-sm w-100">
+                                <i class="bi bi-check2-circle"></i> Durumu Güncelle
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <!-- Talebi üstlenmemiş destek: form pasif -->
+                        <div class="text-center text-muted py-2 small">
+                            <i class="bi bi-lock"></i>
+                            Durumu güncellemek için önce talebi üstlenin.
+                        </div>
+                        <select class="form-select form-select-sm mb-2" disabled>
+                            <option>— Pasif —</option>
+                        </select>
+                        <button class="btn btn-secondary btn-sm w-100" disabled>
+                            <i class="bi bi-check2-circle"></i> Durumu Güncelle
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>

@@ -1,0 +1,190 @@
+@{
+    ViewData["Title"] = "Dashboard";
+    bool isStaff = (bool)(ViewBag.IsStaff ?? false);
+}
+
+<h2 class="mb-4">
+    <i class="bi bi-speedometer2"></i> Dashboard
+    @if (isStaff)
+    {
+        <span class="badge bg-primary ms-2">Destek Ekibi</span>
+    }
+    else
+    {
+        <span class="badge bg-success ms-2">Müşteri Paneli</span>
+    }
+</h2>
+
+@if (isStaff)
+{
+    <!-- ===== DESTEK EKİBİ DASHBOARD ===== -->
+    <!-- İstatistik kartları — ViewBag ile controller'dan gelen veriler -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center p-3 bg-primary text-white">
+                <div class="fs-1 fw-bold">@ViewBag.TotalTickets</div>
+                <div><i class="bi bi-ticket"></i> Toplam Talep</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center p-3 bg-info text-white">
+                <div class="fs-1 fw-bold">@ViewBag.OpenTickets</div>
+                <div><i class="bi bi-envelope-open"></i> Açık</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center p-3 bg-warning">
+                <div class="fs-1 fw-bold">@ViewBag.InProgressTickets</div>
+                <div><i class="bi bi-gear-wide-connected"></i> İncelemede</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center p-3 bg-success text-white">
+                <div class="fs-1 fw-bold">@ViewBag.ResolvedTickets</div>
+                <div><i class="bi bi-check-circle"></i> Çözüldü</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Son açık talepler -->
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-clock-history"></i> Son Açık Talepler</h5>
+            <a asp-controller="Ticket" asp-action="Index" class="btn btn-sm btn-outline-primary">
+                Tümünü Gör
+            </a>
+        </div>
+        <div class="card-body p-0">
+            @if (ViewBag.RecentTickets != null)
+            {
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Başlık</th>
+                            <th>Müşteri</th>
+                            <th>Öncelik</th>
+                            <th>Tarih</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var ticket in ViewBag.RecentTickets)
+                        {
+                            <tr>
+                                <td>@ticket.Id</td>
+                                <td>@ticket.Title</td>
+                                <td>@ticket.Customer?.FullName</td>
+                                <td>
+                                    <!-- Önceliğe göre renk seç -->
+                                    @{
+                                        var priorityClass = ticket.Priority.ToString() switch
+                                        {
+                                            "Kritik" => "danger",
+                                            "Yuksek" => "warning",
+                                            "Orta" => "info",
+                                            _ => "secondary"
+                                        };
+                                    }
+                                    <span class="badge bg-@priorityClass">@ticket.Priority</span>
+                                </td>
+                                <td class="text-muted small">@ticket.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
+                                <td>
+                                    <a asp-controller="Ticket" asp-action="Detail"
+                                       asp-route-id="@ticket.Id" class="btn btn-sm btn-outline-primary">
+                                        İncele
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+}
+else
+{
+    <!-- ===== MÜŞTERİ DASHBOARD ===== -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm text-center p-3 bg-primary text-white">
+                <div class="fs-1 fw-bold">@ViewBag.MyTotalTickets</div>
+                <div><i class="bi bi-ticket"></i> Toplam Talebim</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm text-center p-3 bg-info text-white">
+                <div class="fs-1 fw-bold">@ViewBag.MyOpenTickets</div>
+                <div><i class="bi bi-envelope-open"></i> Açık</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm text-center p-3 bg-success text-white">
+                <div class="fs-1 fw-bold">@ViewBag.MyResolvedTickets</div>
+                <div><i class="bi bi-check-circle"></i> Çözüldü</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5><i class="bi bi-clock-history"></i> Son Taleplerim</h5>
+        <a asp-controller="Ticket" asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Yeni Talep Aç
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            @if (ViewBag.MyRecentTickets != null)
+            {
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Başlık</th>
+                            <th>Durum</th>
+                            <th>Tarih</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var ticket in ViewBag.MyRecentTickets)
+                        {
+                            <tr>
+                                <td>@ticket.Id</td>
+                                <td>@ticket.Title</td>
+                                <td>
+                                    @{
+                                        var statusClass = ticket.Status.ToString() switch
+                                        {
+                                            "Acik" => "primary",
+                                            "Incelemede" => "warning",
+                                            "Cozuldu" => "success",
+                                            _ => "secondary"
+                                        };
+                                        var statusLabel = ticket.Status.ToString() switch
+                                        {
+                                            "Acik" => "Açık",
+                                            "Incelemede" => "İncelemede",
+                                            "Cozuldu" => "Çözüldü",
+                                            _ => "Kapandı"
+                                        };
+                                    }
+                                    <span class="badge bg-@statusClass">@statusLabel</span>
+                                </td>
+                                <td class="text-muted small">@ticket.CreatedAt.ToString("dd.MM.yyyy")</td>
+                                <td>
+                                    <a asp-controller="Ticket" asp-action="Detail"
+                                       asp-route-id="@ticket.Id" class="btn btn-sm btn-outline-primary">
+                                        Görüntüle
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+}
